@@ -1,0 +1,22 @@
+# Set start time - this is the earliest events the script will return
+$Yesterday = (Get-Date) - (New-Timespan -Day 1)
+
+$From = <insert from address>
+$To = <insert to addresees seperated by a comma>
+$Server = <insert the SMTP server you will use>
+
+# Get the events from the log
+# ProviderName is the event provider
+# Data is from the XML on the Details view of the event. Data from any field with the Key "Data Name" can be used
+# StartTime is the earliest event it will return (currently calculated as one day from the current date/time).
+$event = get-winevent -FilterHashtable @{ providerName = "Microsoft-Windows-TaskScheduler"; Data = "\Check Enterprise Admins"; StartTime = $yesterday } 
+
+# If any events were returned then email the details
+if ($event) {
+    $Header = "<style>TABLE {border-width: 1px; border-style: solid; border-color: SlateGrey; border-collapse: collapse;};TD{border-width: 1px; padding: 3px; border-style: solid; border-color: SlateGrey;}</style>"
+    $Body = $event | Select TimeCreated, ID, Message | ConvertTo-HTML -Head $Header | Out-String
+    Send-MailMessage -To $To -From $From -Subject "Scheduled Task Check Script" -BodyAsHtml -Body $body -SmtpServer $Server
+}
+else {
+    Send-MailMessage -To $To -From $From -Subject "Scheduled Task Check Script" -Body "The script did not return any event entries" -SmtpServer $Server
+}
